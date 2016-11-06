@@ -1,15 +1,15 @@
 import socket
 from sys import argv, exit
 
-# Location of PHP server running in a docker container on Opennebula
-server_address = ('', 8080)
+HOST = ''
+PORT = 8080
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # sock.settimeout(1)
 
 try:
     # Connect to the server
-    sock.connect((server_address))
+    sock.connect((HOST, PORT))
 except socket.error as msg:
     print(str(msg[1]))
     exit()
@@ -19,8 +19,9 @@ clientMessage = ""
 if len(argv) > 1 and type(argv[1]) is str:
     clientMessage = argv[1]
 else:
-    clientMessage = "HELO text\n"
+    clientMessage = "HELO text"
 
+clientMessage += "\n"
 # Format message string to include message length
 len_message = str(len(clientMessage))
 final_message = len_message + '::' + clientMessage

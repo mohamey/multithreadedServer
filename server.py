@@ -9,20 +9,27 @@ def respondHello(conn, addr):
     len_response = str(len(responseText))
     final_response = len_response + '::' + responseText
     conn.send(final_response.encode())
+    print("Sent response")
+
+def killServer(conn, addr):
+    responseText = "Killing Server"
+    len_response = str(len(responseText))
+    final_response = len_response + '::' + responseText
+    conn.send(final_response.encode())
 
 validMessages = {
-        'KILL_SERVICE\n': "Kill le server",
-        'HELO text\n': respondHello
+        'HELO text': respondHello
 }
 
 # Handle the incoming messages from the client
 def handleMessage(conn, addr, msg):
+    msg = msg.strip()
     if msg in validMessages:
         func = validMessages[msg]
         func(conn, addr)
     else:
         message = 'message not recognized'
-        len_msg = len(message)
+        len_msg = str(len(message))
         conn.send((len_msg + '::' + message).encode())
 
     return
@@ -34,7 +41,6 @@ if __name__ == '__main__':
         HOST = ''
         PORT = 8080
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-
             # Bind socket to local host/port
             try:
                 sock.bind((HOST, PORT))
@@ -72,7 +78,13 @@ if __name__ == '__main__':
                         bytes_recvd += len(data)
 
                 msg_string = data.decode('utf-8')
-                workers.apply_async(handleMessage, [conn, addr, msg_string])
+                # If the kill service message is received, exit loop, end program
+                if "KILL_SERVICE" in msg_string:
+                    workers.apply_async(killServer(conn, addr))
+                    print("Killing Thread Pool")
+                    workers.close()
+                    break
+                else:
+                    workers.apply_async(handleMessage, [conn, addr, msg_string])
 
-        sock.close()
-
+        print("Closing Server")

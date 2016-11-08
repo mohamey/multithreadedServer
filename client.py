@@ -7,6 +7,20 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # sock.settimeout(1)
 
+clientMessage = ''
+
+# Check arguments for a port number
+if '-p' in argv:
+    pos = argv.index('-p')
+    PORT = int(argv[pos+1])
+
+# Check arguments for a message
+if '-m' in argv:
+    pos = argv.index('-m')
+    clientMessage = argv[pos+1]
+else:
+    clientMessage = 'HELO text'
+
 try:
     # Connect to the server
     sock.connect((HOST, PORT))
@@ -14,12 +28,6 @@ except socket.error as msg:
     print(str(msg[1]))
     exit()
 
-# Build client message
-clientMessage = ""
-if len(argv) > 1 and type(argv[1]) is str:
-    clientMessage = argv[1]
-else:
-    clientMessage = "HELO text"
 
 clientMessage += "\n"
 # Format message string to include message length

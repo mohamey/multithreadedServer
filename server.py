@@ -1,45 +1,59 @@
 import socket
 import sys
+from time import sleep
 from multiprocessing import Pool
 
-# Conn is the client's socket object
-# Addr contains the address and port number
+# Encode the message to be sent
+def encode_message(msg):
+    len_message = str(len(msg))
+    final_message = len_message + '::' + msg
+    return final_message.encode()
+
+# Encode and send response
+# conn: Socket object representing the client
 def respondHello(conn, addr):
-    responseText = 'HELO text\nIP:[{}]\nPORT:[{}]\nStudentID:[12345678]\n'.format(addr[0], str(addr[1]))
-    len_response = str(len(responseText))
-    final_response = len_response + '::' + responseText
-    conn.send(final_response.encode())
-    print("Sent response")
+    response = encode_message('HELO text\nIP:[{}]\nPORT:[{}]\nStudentID:[13318246]\n'.format(addr[0], str(addr[1])))
+    conn.send(response)
+    print("Sent response, closing connection")
+    conn.close()
 
 def killServer(conn, addr):
-    responseText = "Killing Server"
-    len_response = str(len(responseText))
-    final_response = len_response + '::' + responseText
-    conn.send(final_response.encode())
+    response = encode_message("Killing Server")
+    conn.send(response)
+    print("Sent Response, Closing Connection")
+    conn.close()
 
+# Add message-function pairs as necessary
 validMessages = {
-        'HELO text': respondHello
+    'HELO text': respondHello
 }
 
 # Handle the incoming messages from the client
 def handleMessage(conn, addr, msg):
+    print("Sleeping")
+    sleep(15)
     msg = msg.strip()
     if msg in validMessages:
         func = validMessages[msg]
         func(conn, addr)
     else:
-        message = 'message not recognized'
-        len_msg = str(len(message))
-        conn.send((len_msg + '::' + message).encode())
+        response = encode_message('message not recognized')
+        conn.send(response)
+        print("Response sent, closing Connection")
+        conn.close()
 
     return
+
 
 # If server is main thread, initialise it
 if __name__ == '__main__':
     with Pool(10) as workers:
         # Create the server socket
-        HOST = ''
+        HOST = '0.0.0.0'
         PORT = 8080
+        if '-p' in sys.argv:
+            pos = sys.argv.index('-p')
+            PORT = int(sys.argv[pos+1])
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Bind socket to local host/port
             try:
@@ -49,7 +63,8 @@ if __name__ == '__main__':
                 sys.exit()
 
             # Start listening on socket
-            sock.listen()
+            sock.listen(15)
+            print("Server listening on {}:{}".format(HOST, PORT))
 
             # Wait and listen for client connections
             while True:

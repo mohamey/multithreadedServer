@@ -1,6 +1,5 @@
 import socket
 import sys
-from time import sleep
 from multiprocessing import Pool
 
 # Encode the message to be sent
@@ -30,8 +29,6 @@ validMessages = {
 
 # Handle the incoming messages from the client
 def handleMessage(conn, addr, msg):
-    print("Sleeping")
-    sleep(15)
     msg = msg.strip()
     if msg in validMessages:
         func = validMessages[msg]

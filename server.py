@@ -80,11 +80,14 @@ if __name__ == '__main__':
 
                     # If it's the first iteration, find out how many bytes we're expecting
                     if bytes_recvd == 0:
-                        new_data_string = new_data.decode('utf-8')
-                        size_index = new_data_string.index('::')
-                        bytes_expected = int(new_data_string[:size_index])
-                        data += new_data_string[size_index+2:].encode()
-                        bytes_recvd += len(data)
+                        try:
+                            new_data_string = new_data.decode('utf-8')
+                            size_index = new_data_string.index('::')
+                            bytes_expected = int(new_data_string[:size_index])
+                            data += new_data_string[size_index+2:].encode()
+                            bytes_recvd += len(data)
+                        except ValueError:
+                            break
                     else:
                         data += new_data
                         bytes_recvd += len(data)

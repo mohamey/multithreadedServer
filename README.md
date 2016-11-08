@@ -27,9 +27,9 @@ The server implements threadpooling using python3's `multiprocessing.pool` libra
 ### Client
 To run the client, execute:
 ```bash
-python3 client.py -p $serverPortNumber -m 'HELO text'
+python3 client.py -h hostname.com -p $serverPortNumber -m 'HELO text'
 ```
-where `-p` is the server port number, and `-m` is the message to be sent. This defaults to 'HELO text'.
+where `-h` is the server host (specified by ip or domain), `-p` is the server port number, and `-m` is the message to be sent. This defaults to 'HELO text'.
 
 ## Communicating with the server
 Please note, messages to the server must be of the format:

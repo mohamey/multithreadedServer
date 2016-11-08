@@ -14,6 +14,11 @@ if '-p' in argv:
     pos = argv.index('-p')
     PORT = int(argv[pos+1])
 
+# Check arguments for a host
+if '-h' in argv:
+    pos = argv.index('-h')
+    HOST = str(argv[pos+1])
+
 # Check arguments for a message
 if '-m' in argv:
     pos = argv.index('-m')

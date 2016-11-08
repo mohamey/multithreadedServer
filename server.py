@@ -10,8 +10,8 @@ def encode_message(msg):
 
 # Encode and send response
 # conn: Socket object representing the client
-def respondHello(conn, addr):
-    response = encode_message('HELO text\nIP:[{}]\nPORT:[{}]\nStudentID:[13318246]\n'.format(addr[0], str(addr[1])))
+def respondHello(conn, addr, msg):
+    response = encode_message('{}\nIP:[{}]\nPORT:[{}]\nStudentID:[13318246]\n'.format(msg, addr[0], str(addr[1])))
     conn.send(response)
     print("Sent response, closing connection")
     conn.close()
@@ -24,17 +24,18 @@ def killServer(conn, addr):
 
 # Add message-function pairs as necessary
 validMessages = {
-    'HELO text': respondHello
+    'HELO': respondHello
 }
 
 # Handle the incoming messages from the client
 def handleMessage(conn, addr, msg):
     msg = msg.strip()
-    if msg in validMessages:
-        func = validMessages[msg]
-        func(conn, addr)
+    msg_parts = msg.split(' ')
+    if msg_parts[0] in validMessages:
+        func = validMessages[msg_parts[0]]
+        func(conn, addr, msg)
     else:
-        response = encode_message('message not recognized')
+        response = encode_message('message: {} not recognized'.format(msg))
         conn.send(response)
         print("Response sent, closing Connection")
         conn.close()

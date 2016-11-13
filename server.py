@@ -2,22 +2,16 @@ import socket
 import sys
 from multiprocessing import Pool
 
-# Encode the message to be sent
-def encode_message(msg):
-    len_message = str(len(msg))
-    final_message = len_message + '::' + msg
-    return final_message.encode()
-
 # Encode and send response
 # conn: Socket object representing the client
 def respondHello(conn, addr, msg):
-    response = encode_message('{}\nIP:[{}]\nPORT:[{}]\nStudentID:[13318246]\n'.format(msg, addr[0], str(addr[1])))
-    conn.send(response)
+    response = '{}\nIP:[{}]\nPORT:[{}]\nStudentID:[13318246]\n'.format(msg, addr[0], str(addr[1]))
+    conn.send(response.encode())
     print("Sent response, closing connection")
     conn.close()
 
 def killServer(conn, addr):
-    response = encode_message("Killing Server")
+    response = "Killing Server\n".encode()
     conn.send(response)
     print("Sent Response, Closing Connection")
     conn.close()
@@ -35,8 +29,8 @@ def handleMessage(conn, addr, msg):
         func = validMessages[msg_parts[0]]
         func(conn, addr, msg)
     else:
-        response = encode_message('message: {} not recognized'.format(msg))
-        conn.send(response)
+        response = 'message: {} not recognized'.format(msg)
+        conn.send(response.encode())
         print("Response sent, closing Connection")
         conn.close()
 
@@ -70,30 +64,19 @@ if __name__ == '__main__':
                 conn, addr = sock.accept()
                 print('Connected with {}:{}'.format(addr[0], str(addr[1])))
                 data = b''
-                bytes_recvd = 0
-                bytes_expected = 2048
-                while bytes_recvd < bytes_expected:
+                while True:
                     new_data = conn.recv(1024)
 
                     # If nothing is received, exit the loop
                     if not new_data:
                         break
 
-                    # If it's the first iteration, find out how many bytes we're expecting
-                    if bytes_recvd == 0:
-                        try:
-                            new_data_string = new_data.decode('utf-8')
-                            size_index = new_data_string.index('::')
-                            bytes_expected = int(new_data_string[:size_index])
-                            data += new_data_string[size_index+2:].encode()
-                            bytes_recvd += len(data)
-                        except ValueError:
-                            break
-                    else:
-                        data += new_data
-                        bytes_recvd += len(data)
+                    data += new_data
+                    if data.decode().endswith('\n'):
+                        break
 
                 msg_string = data.decode('utf-8')
+                print(msg_string)
                 # If the kill service message is received, exit loop, end program
                 if "KILL_SERVICE" in msg_string:
                     workers.apply_async(killServer(conn, addr))

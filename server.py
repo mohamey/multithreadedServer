@@ -5,7 +5,7 @@ from multiprocessing import Pool
 # Encode and send response
 # conn: Socket object representing the client
 def respondHello(conn, addr, msg):
-    response = '{}\nIP:[{}]\nPORT:[{}]\nStudentID:[13318246]\n'.format(msg, addr[0], str(addr[1]))
+    response = '{}\nIP:[{}]\nPORT:[{}]\nStudentID:[13318246]\n'.format(msg, socket.gethostname(), str(addr[1]))
     conn.send(response.encode())
     print("Sent response, closing connection")
     conn.close()

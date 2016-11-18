@@ -1,6 +1,10 @@
 import socket
 import sys
+import os
+from _thread import interrupt_main
 from multiprocessing import Pool
+
+keepAlive = True
 
 # Encode and send response
 # conn: Socket object representing the client
@@ -8,79 +12,68 @@ def respondHello(conn, addr, msg):
     response = '{}\nIP:{}\nPort:{}\nStudentID:13318246\n'.format(msg, '46.101.83.147', '8001')
     conn.sendall(response.encode())
     print("Sent response, Listening")
-    data = b''
-    while True:
-        print("Waiting")
-        new_data = conn.recv(1024)
-        if new_data:
-            print(new_data.decode())
-            data += new_data
-        else:
-            break
 
-        if data.decode('utf-8').endswith('\n'):
-            print(data.decode())
-            break
+    data = listen(conn)
 
     msg_string = data.decode('utf-8')
-    if 'KILL_SERVICE' in msg_string:
-        conn.close()
-        print('connection closed')
-        # workers.close()
-        print('Exiting in respondHello')
-        sys.exit()
-    else:
-        handleMessage(conn, addr, msg_string)
-    # conn.close()
 
-def killServer(conn, addr):
+    handleMessage(conn, addr, msg_string)
+
+def killServer(conn, addr, msg):
     response = "Killing Server\n".encode()
     conn.sendall(response)
+    keepAlive = False
     print("Sent Response, Closing Connection")
     conn.close()
-    sys.exit()
+    print('Killing server')
 
 # Add message-function pairs as necessary
 validMessages = {
-    'HELO': respondHello
+    'HELO': respondHello,
+    'KILL_SERVICE': killServer
 }
+
 
 # Handle the incoming messages from the client
 def handleMessage(conn, addr, msg):
     msg = msg.strip()
     msg_parts = msg.split(' ')
+    print(msg_parts[0])
     if msg_parts[0] in validMessages:
         func = validMessages[msg_parts[0]]
         func(conn, addr, msg)
     else:
         response = 'message: {} not recognized'.format(msg)
         conn.sendall(response.encode())
-        data = b''
-        while True:
-            print("Waiting")
-            new_data = conn.recv(1024)
-            if new_data:
-                print(new_data.decode())
-                data += new_data
-            else:
-                break
 
-            if data.decode('utf-8').endswith('\n'):
-                print(data.decode())
-                break
+        data = listen(conn)
 
         msg_string = data.decode('utf-8')
-        if 'KILL_SERVICE' in msg_string:
-            conn.close()
-            print('connection closed')
-            # workers.close()
-            print('Exiting in handle message')
-            sys.exit()
-        else:
-            handleMessage(conn, addr, msg_string)
+        # try:
+        handleMessage(conn, addr, msg_string)
+        # except KeyboardInterrupt:
+        #     print("ANOTHER ONE")
+        #     interrupt_main()
 
     return
 
+# Listen for message from client
+def listen(conn):
+    data = b''
+    while True:
+        new_data = conn.recv(1024)
+
+        # If nothing is received, exit the loop
+        if not new_data:
+            break
+
+        data += new_data
+        print("Data received")
+        print(data.decode())
+        if data.decode('utf-8').endswith('\n'):
+            break
+
+    return data
 
 # If server is main thread, initialise it
 if __name__ == '__main__':
@@ -91,6 +84,8 @@ if __name__ == '__main__':
     if '-p' in sys.argv:
         pos = sys.argv.index('-p')
         PORT = int(sys.argv[pos+1])
+
+    # Create a socket object to be used for the port
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         # Bind socket to local host/port
         try:
@@ -108,32 +103,22 @@ if __name__ == '__main__':
             # Make a blocking call to wait for connections
             conn, addr = sock.accept()
             print('Connected with {}:{}'.format(addr[0], str(addr[1])))
-            data = b''
-            while True:
-                new_data = conn.recv(1024)
-
-                # If nothing is received, exit the loop
-                if not new_data:
-                    break
-
-                data += new_data
-                print("Data receive")
-                print(data.decode())
-                if data.decode('utf-8').endswith('\n'):
-                    break
-                elif 'KILL_SERVICE' in data.decode('utf-8'):
-                    break
+            if keepAlive:
+                try:
+                    data = listen(conn)
+                except:
+                    pass
+                    # print("Timeout")
+            else:
+                sys.exit()
 
             msg_string = data.decode('utf-8')
             print("LeString: {}".format(msg_string))
-            # If the kill service message is received, exit loop, end program
-            if "KILL_SERVICE" in msg_string:
-                workers.apply_async(killServer(conn, addr))
-                print("Killing Thread Pool")
-                workers.close()
-                sys.exit()
-                break
-            else:
+
+            try:
                 workers.apply_async(handleMessage, [conn, addr, msg_string])
+            except KeyboardInterrupt:
+                print("Keyboard interrupt detected!!")
+                sys.exit()
 
     print("Closing Server")

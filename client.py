@@ -53,5 +53,8 @@ while True:
 # Print the result
 print(data.decode("utf-8"))
 
+# Kill Server
+sock.send('KILL_SERVICE\n'.encode())
+
 # Close the socket
 sock.close()

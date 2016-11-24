@@ -4,8 +4,6 @@ import os
 from _thread import interrupt_main
 from multiprocessing import Pool
 
-keepAlive = True
-
 # Encode and send response
 # conn: Socket object representing the client
 def respondHello(conn, addr, msg):
@@ -106,14 +104,11 @@ if __name__ == '__main__':
             # Make a blocking call to wait for connections
             conn, addr = sock.accept()
             print('Connected with {}:{}'.format(addr[0], str(addr[1])))
-            if keepAlive:
-                try:
-                    data = listen(conn)
-                except:
-                    pass
-                    # print("Timeout")
-            else:
-                sys.exit()
+            try:
+                data = listen(conn)
+            except:
+                pass
+                # print("Timeout")
 
             msg_string = data.decode('utf-8')
             print("LeString: {}".format(msg_string))

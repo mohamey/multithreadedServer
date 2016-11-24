@@ -58,20 +58,23 @@ def handleMessage(conn, addr, msg):
     return
 
 # Listen for message from client
-def listen(conn):
+def listen(conn, timeout=2, blocking=False):
     data = b''
+    if blocking:
+        conn.setblocking(0)
+
     while True:
-        new_data = conn.recv(1024)
+        new_data = b''
+        try:
+            new_data = conn.recv(1024)
+        except:
+            pass
 
         # If nothing is received, exit the loop
         if not new_data:
             break
-
-        data += new_data
-        print("Data received")
-        print(data.decode())
-        if data.decode('utf-8').endswith('\n'):
-            break
+        else:
+            data += new_data
 
     return data
 

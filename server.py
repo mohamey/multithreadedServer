@@ -1,28 +1,43 @@
 import socket
 import sys
 import os
+import signal
 from _thread import interrupt_main
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager, Event
+
+manager = Manager()
+# d = manager.dict()
 
 # Encode and send response
 # conn: Socket object representing the client
-def respondHello(conn, addr, msg):
+def respondHello(conn, addr, msg, pid):
+    print("Responding hello!")
     response = '{}\nIP:{}\nPort:{}\nStudentID:13318246\n'.format(msg, '46.101.83.147', '8001')
-    conn.sendall(response.encode())
+    print("Response formatted")
+    conn.send(response.encode())
     print("Sent response, Listening")
 
     data = listen(conn)
 
+    print("Message received in respondHello")
     msg_string = data.decode('utf-8')
+    print(msg_string)
 
-    handleMessage(conn, addr, msg_string)
+    handleMessage(conn, addr, msg_string, pid)
 
-def killServer(conn, addr, msg):
+def killServer(conn, addr, msg, pid):
+    print("Request to kill server received")
     response = "Killing Server\n".encode()
-    conn.sendall(response)
+    print("Sending response")
+    conn.send(response)
     keepAlive = False
     print("Sent Response, Closing Connection")
-    conn.close()
+    # conn.close()
+    print(type(pid))
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except Exception as e:
+        print(sys.exc_info()[0])
     print('Killing server')
 
 # Add message-function pairs as necessary
@@ -33,25 +48,26 @@ validMessages = {
 
 
 # Handle the incoming messages from the client
-def handleMessage(conn, addr, msg):
+def handleMessage(conn, addr, msg, pid):
+    print("Worker started with message {}".format(msg))
     msg = msg.strip()
     msg_parts = msg.split(' ')
     print(msg_parts[0])
     if msg_parts[0] in validMessages:
+        print("Found function for {}".format(msg_parts[0]))
         func = validMessages[msg_parts[0]]
-        func(conn, addr, msg)
+        func(conn, addr, msg, pid)
     else:
+        print("Mesage not recognized")
         response = 'message: {} not recognized'.format(msg)
-        conn.sendall(response.encode())
+        conn.send(response.encode())
+        print("Error message sent, listening...")
 
-        data = listen(conn)
+        data = listen(conn, blocking=True)
+        print("Message received in unknown message handler")
 
         msg_string = data.decode('utf-8')
-        # try:
-        handleMessage(conn, addr, msg_string)
-        # except KeyboardInterrupt:
-        #     print("ANOTHER ONE")
-        #     interrupt_main()
+        handleMessage(conn, addr, msg_string, pid)
 
     return
 
@@ -64,6 +80,7 @@ def listen(conn, timeout=2, blocking=False):
     while True:
         new_data = b''
         try:
+            print("Receiving data")
             new_data = conn.recv(1024)
         except:
             pass
@@ -72,6 +89,7 @@ def listen(conn, timeout=2, blocking=False):
         if not new_data:
             break
         else:
+            print("Data received: {}".format(new_data.decode('utf-8')))
             data += new_data
 
     return data
@@ -91,6 +109,7 @@ if __name__ == '__main__':
         # Bind socket to local host/port
         try:
             sock.bind((HOST, PORT))
+            print("Bound socket to address")
         except socket.error as msg:
             print(str(msg[1]))
             sys.exit()
@@ -105,7 +124,8 @@ if __name__ == '__main__':
             conn, addr = sock.accept()
             print('Connected with {}:{}'.format(addr[0], str(addr[1])))
             try:
-                data = listen(conn)
+                print("Listening to incoming data")
+                data = listen(conn, blocking=True)
             except:
                 pass
                 # print("Timeout")
@@ -114,7 +134,7 @@ if __name__ == '__main__':
             print("LeString: {}".format(msg_string))
 
             try:
-                workers.apply_async(handleMessage, [conn, addr, msg_string])
+                workers.apply_async(handleMessage, [conn, addr, msg_string, os.getpid()])
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected!!")
                 sys.exit()

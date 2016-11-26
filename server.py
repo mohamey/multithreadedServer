@@ -16,14 +16,15 @@ def respondHello(conn, addr, msg, pid):
     print("Response formatted")
     conn.send(response.encode())
     print("Sent response, Listening")
+    conn.close()
 
-    data = listen(conn)
+    # data = listen(conn)
 
-    print("Message received in respondHello")
-    msg_string = data.decode('utf-8')
-    print(msg_string)
+    # print("Message received in respondHello")
+    # msg_string = data.decode('utf-8')
+    # print(msg_string)
 
-    handleMessage(conn, addr, msg_string, pid)
+    # handleMessage(conn, addr, msg_string, pid)
 
 def killServer(conn, addr, msg, pid):
     print("Request to kill server received")
@@ -32,8 +33,8 @@ def killServer(conn, addr, msg, pid):
     conn.send(response)
     keepAlive = False
     print("Sent Response, Closing Connection")
-    # conn.close()
-    print(type(pid))
+    conn.close()
+    # print(type(pid))
     try:
         os.kill(pid, signal.SIGKILL)
     except Exception as e:
@@ -63,11 +64,12 @@ def handleMessage(conn, addr, msg, pid):
         conn.send(response.encode())
         print("Error message sent, listening...")
 
-        data = listen(conn, blocking=True)
-        print("Message received in unknown message handler")
+        conn.close()
+        # data = listen(conn, blocking=True)
+        # print("Message received in unknown message handler")
 
-        msg_string = data.decode('utf-8')
-        handleMessage(conn, addr, msg_string, pid)
+        # msg_string = data.decode('utf-8')
+        # handleMessage(conn, addr, msg_string, pid)
 
     return
 
@@ -132,6 +134,8 @@ if __name__ == '__main__':
 
             msg_string = data.decode('utf-8')
             print("LeString: {}".format(msg_string))
+            if msg_string.startswith('KILL_SERVICE'):
+                sys.exit()
 
             try:
                 workers.apply_async(handleMessage, [conn, addr, msg_string, os.getpid()])
